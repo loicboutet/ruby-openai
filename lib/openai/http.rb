@@ -54,6 +54,7 @@ module OpenAI
     # @return [Proc] An outer proc that iterates over a raw stream, converting it to JSON.
     def to_json_stream(user_proc:)
       proc do |chunk, _|
+        puts chunk
         results = chunk.scan(/^\s*(data|error): *(\{.+\})/i)
         if results.length.positive?
           results.each do |result_type, result_json|
@@ -61,7 +62,7 @@ module OpenAI
             result.merge!("result_type" => result_type)
             user_proc.call(result)
           rescue JSON::ParserError
-            # Ignore invalid JSON.
+            puts "INVALID JSON: #{result_json}"
           end
         elsif !chunk.match(/^\s*(data|error):/i)
           begin
@@ -70,7 +71,7 @@ module OpenAI
             result.merge!("result_type" => result_type)
             user_proc.call(result)
           rescue JSON::ParserError
-            # Ignore invalid JSON.
+            puts "INVALID JSON: #{result_json}"
           end
         end
       end

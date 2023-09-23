@@ -54,7 +54,7 @@ module OpenAI
     # @return [Proc] An outer proc that iterates over a raw stream, converting it to JSON.
     def to_json_stream(user_proc:)
       proc do |chunk, _|
-        puts chunk
+        puts "CHUNK : #{chunk}"
         results = chunk.scan(/^\s*(data|error): *(\{.+\})/i)
         if results.length.positive?
           results.each do |result_type, result_json|

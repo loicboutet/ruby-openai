@@ -62,7 +62,7 @@ module OpenAI
             result.merge!("result_type" => result_type)
             user_proc.call(result)
           rescue JSON::ParserError
-            puts "INVALID JSON: #{result_json}"
+            puts "INVALID JSON: #{chunk}"
           end
         elsif !chunk.match(/^\s*(data|error):/i)
           begin
@@ -71,7 +71,7 @@ module OpenAI
             result.merge!("result_type" => result_type)
             user_proc.call(result)
           rescue JSON::ParserError
-            puts "INVALID JSON: #{result_json}"
+            puts "INVALID JSON: #{chunk}"
           end
         end
       end

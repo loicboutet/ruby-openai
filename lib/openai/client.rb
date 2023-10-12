@@ -12,6 +12,7 @@ module OpenAI
       extra_headers
     ].freeze
     attr_reader *CONFIG_KEYS
+    attr_accessor :tokens_received
 
     def initialize(config = {})
       CONFIG_KEYS.each do |key|
@@ -22,7 +23,7 @@ module OpenAI
     end
 
     def chat(parameters: {})
-      json_post(path: "/chat/completions", parameters: parameters)
+      json_post(path: "/chat/completions", parameters: parameters, client: self)
     end
 
     def completions(parameters: {})

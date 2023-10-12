@@ -6,10 +6,11 @@ module OpenAI
       end&.body)
     end
 
-    def json_post(path:, parameters:)
+    def json_post(path:, parameters:, client: nil)
       to_json(conn.post(uri(path: path)) do |req|
         if parameters[:stream].respond_to?(:call)
-          req.options.on_data = to_json_stream(user_proc: parameters[:stream])
+          client.tokens_received = 0 if client
+          req.options.on_data = to_json_stream(user_proc: parameters[:stream], client: client)
           parameters[:stream] = true # Necessary to tell OpenAI to stream.
         elsif parameters[:stream]
           raise ArgumentError, "The stream parameter must be a Proc or have a #call method"
@@ -17,7 +18,7 @@ module OpenAI
 
         req.headers = headers
         req.body = parameters.to_json
-      end&.body)
+      end&.body, client)
     end
 
     def multipart_post(path:, parameters: nil)
@@ -35,8 +36,13 @@ module OpenAI
 
     private
 
-    def to_json(string)
-      return unless string
+    def to_json(string, client = nil)
+      if string.blank?
+        if client 
+          return {"usage": {"completion_token": client.tokens_received}} 
+        end
+        return 
+      end
 
       JSON.parse(string)
     rescue JSON::ParserError
@@ -52,14 +58,15 @@ module OpenAI
     #
     # @param user_proc [Proc] The inner proc to call for each JSON object in the chunk.
     # @return [Proc] An outer proc that iterates over a raw stream, converting it to JSON.
-    def to_json_stream(user_proc:)
+    def to_json_stream(user_proc:, client: nil)
       proc do |chunk, _|
-        puts "CHUNK : #{chunk}"
+        Rails.logger.info "CHUNK : #{chunk} | _ : #{_}"
         results = chunk.scan(/^\s*(data|error): *(\{.+\})/i)
         if results.length.positive?
           results.each do |result_type, result_json|
             result = JSON.parse(result_json)
             result.merge!("result_type" => result_type)
+            client.tokens_received += 1 if client
             user_proc.call(result)
           rescue JSON::ParserError
             puts "INVALID JSON: #{chunk}"
